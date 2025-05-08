@@ -75,21 +75,31 @@ def maybe_sparsfication(data, dataset, follow_by_subgraph_sampling,heuristic= 0,
         di, dj = torch.nan_to_num(1. / node_degree[src]), torch.nan_to_num(1. / node_degree[dst])
         pe = (di + dj).double()
         pe = pe / torch.sum(pe)
+        import matplotlib.pyplot as plt
+        plt.hist(pe.cpu().numpy(), bins=100)
+        plt.title("Edge Sampling Probabilities")
+        plt.savefig("edge_prob_histogram2.png", dpi=300)
     elif heuristic==1:
         print('Sparsify the graph by LOG of (1 + 2-hop degrees)')
         # Create adj_scipy from CPU tensors src, dst
         adj_scipy = to_scipy_sparse_matrix(torch.stack([src,dst]), num_nodes=N)
         d_u_squared = get_d_u_squared_matrix_ops(adj_scipy) # Returns float tensor, on CPU
-        
+        #cap = torch.quantile(d_u_squared, 0.6)
+        #d_u_squared = torch.clamp(d_u_squared, max=cap)
         # Apply log1p transformation: log(1 + count)
-        log_transformed_d_u_sq = torch.log(d_u_squared) # Input is float, output is float
+        log_transformed_d_u_sq = torch.log1p(d_u_squared) # Input is float, output is float
         node_degree = degree(dst, data.num_nodes)
-        di, dj = torch.nan_to_num(1. / node_degree[src]), torch.nan_to_num(1. / node_degree[dst])
 
         # Calculate inverse terms for probability. Add epsilon to prevent 1/0.
-        di_log_2hop = 1.0 / (di + log_transformed_d_u_sq[src] + epsilon_for_log_degree_inverse)
-        dj_log_2hop = 1.0 / (dj+ log_transformed_d_u_sq[dst] + epsilon_for_log_degree_inverse)
+        di_log_2hop = torch.nan_to_num(1. / (node_degree[src] + log_transformed_d_u_sq[src]))
+        dj_log_2hop = torch.nan_to_num(1. / (node_degree[dst] + log_transformed_d_u_sq[dst]))
         pe = (di_log_2hop + dj_log_2hop).double()
+        pe = pe / torch.sum(pe)
+        import matplotlib.pyplot as plt
+        plt.hist(pe.cpu().numpy(), bins=100)
+        plt.title("Edge Sampling Probabilities")
+        plt.savefig("edge_prob_histogram.png", dpi=300)
+
     p_cumsum = torch.cumsum(pe, 0)
     print(f'cal edge distribution used {time.time() - s} sec')
     # For reproducibility, we manually set the seed of graph sparsification to 42. We note that this seed is only effective for the graph sparsification, 
