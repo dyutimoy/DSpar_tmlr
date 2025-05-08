@@ -83,7 +83,6 @@ def maybe_sparsfication(data, dataset, follow_by_subgraph_sampling,heuristic= 0,
         
         # Apply log1p transformation: log(1 + count)
         log_transformed_d_u_sq = torch.log(d_u_squared) # Input is float, output is float
-        node_degree = degree(dst, data.num_nodes)
         di, dj = torch.nan_to_num(1. / node_degree[src]), torch.nan_to_num(1. / node_degree[dst])
 
         # Calculate inverse terms for probability. Add epsilon to prevent 1/0.
