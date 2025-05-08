@@ -27,12 +27,12 @@ def build_adj_t(data):
     return adj_t
 
 
-def get_arxiv(root: str, enable_sparsify: bool, random_sparsify: bool, follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
+def get_arxiv(root: str, enable_sparsify: bool, heuristic:int,random_sparsify: bool, follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
     dataset = PygNodePropPredDataset('ogbn-arxiv', f'{root}/OGB')
     data = dataset[0]
     data.edge_index = to_undirected(data.edge_index)
     if enable_sparsify:
-        data = maybe_sparsfication(data, 'ogbn-arxiv', follow_by_subgraph_sampling, random_sparsify)
+        data = maybe_sparsfication(data, 'ogbn-arxiv', follow_by_subgraph_sampling, heuristic, random_sparsify)
     data.x = data.x.contiguous()
     data.node_year = None
     split_idx = dataset.get_idx_split()
@@ -43,11 +43,11 @@ def get_arxiv(root: str, enable_sparsify: bool, random_sparsify: bool, follow_by
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_products(root: str, enable_sparsify: bool, random_sparsify: bool, follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
+def get_products(root: str, enable_sparsify: bool, random_sparsify: bool,follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
     dataset = PygNodePropPredDataset('ogbn-products', f'{root}/OGB')
     data = dataset[0]
     if enable_sparsify:
-        data = maybe_sparsfication(data, 'ogbn-products', follow_by_subgraph_sampling, random_sparsify, is_undirected=False)
+        data = maybe_sparsfication(data, 'ogbn-products', follow_by_subgraph_sampling ,random_sparsify, is_undirected=False)
     data.x = data.x.contiguous()
     split_idx = dataset.get_idx_split()
     data.train_mask = index2mask(split_idx['train'], data.num_nodes)
@@ -105,7 +105,7 @@ def get_proteins(root: str, enable_sparsify: bool, random_sparsify: bool, follow
     return data, data.num_features, 112 # the number of node classes, from ogb examples
 
 
-def get_data(root: str, name: str, follow_by_subgraph_sampling: bool=False, enable_sparsify: bool=False, random_sparsify: bool=True) -> Tuple[Data, int, int]:
+def get_data(root: str, name: str, follow_by_subgraph_sampling: bool=False, enable_sparsify: bool=False,heuristic: int=0 ,random_sparsify: bool=True) -> Tuple[Data, int, int]:
     if name.lower() == 'reddit':
         return get_reddit(root, enable_sparsify, random_sparsify, follow_by_subgraph_sampling)
     elif name.lower() == 'reddit2':
@@ -115,7 +115,7 @@ def get_data(root: str, name: str, follow_by_subgraph_sampling: bool=False, enab
     elif name.lower() == 'yelp':
         return get_yelp(root, enable_sparsify, random_sparsify, follow_by_subgraph_sampling)
     elif name.lower() == 'arxiv':
-        return get_arxiv(root, enable_sparsify, random_sparsify, follow_by_subgraph_sampling)
+        return get_arxiv(root, enable_sparsify, heuristic , random_sparsify, follow_by_subgraph_sampling)
     elif name.lower() == 'proteins':
         return get_proteins(root, enable_sparsify, random_sparsify, follow_by_subgraph_sampling)
     elif name.lower() == 'products':

@@ -11,8 +11,8 @@ from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import remove_self_loops, add_self_loops, softmax
 
 from torch_geometric.nn.inits import zeros
-import dspar.cpp_extension.quantization as ext_quantization
-
+#import dspar.cpp_extension.quantization as ext_quantization
+import torch.nn.functional as F
 
 class CustomGATConv(MessagePassing):
     def __init__(self, in_channels: Union[int, Tuple[int, int]],
@@ -163,7 +163,8 @@ class QCustomGATConv(CustomGATConv):
                 index: Tensor, ptr: OptTensor,
                 size_i: Optional[int]) -> Tensor:
         alpha = alpha_j if alpha_i is None else alpha_j + alpha_i
-        alpha = ext_quantization.act_quantized_leaky_relu(alpha, self.negative_slope)
+        #alpha = ext_quantization.act_quantized_leaky_relu(alpha, self.negative_slope)
+        alpha = F.leaky_relu(alpha, negative_slope=self.negative_slope)
         alpha = softmax(alpha, index, ptr, size_i)
         self._alpha = alpha
         alpha = self.dropout_module(alpha)
