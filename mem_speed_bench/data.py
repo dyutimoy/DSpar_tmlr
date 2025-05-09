@@ -43,11 +43,11 @@ def get_arxiv(root: str, enable_sparsify: bool, heuristic:int,random_sparsify: b
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_products(root: str, enable_sparsify: bool, random_sparsify: bool,follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
+def get_products(root: str, enable_sparsify: bool,heuristic:int, random_sparsify: bool,follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
     dataset = PygNodePropPredDataset('ogbn-products', f'{root}/OGB')
     data = dataset[0]
     if enable_sparsify:
-        data = maybe_sparsfication(data, 'ogbn-products', follow_by_subgraph_sampling ,random_sparsify, is_undirected=False)
+        data = maybe_sparsfication(data, 'ogbn-products', follow_by_subgraph_sampling, heuristic ,random_sparsify, is_undirected=False)
     data.x = data.x.contiguous()
     split_idx = dataset.get_idx_split()
     data.train_mask = index2mask(split_idx['train'], data.num_nodes)
@@ -90,14 +90,14 @@ def get_reddit2(root: str, enable_sparsify: bool, random_sparsify: bool, follow_
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_proteins(root: str, enable_sparsify: bool, random_sparsify: bool, follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
+def get_proteins(root: str, enable_sparsify: bool, heuristic:int, random_sparsify: bool, follow_by_subgraph_sampling: bool) -> Tuple[Data, int, int]:
     dataset = PygNodePropPredDataset('ogbn-proteins', f'{root}/OGB', transform=T.ToSparseTensor(remove_edge_index=False))
     data = dataset[0]
     col = data.adj_t.storage.col()
     data.x = scatter(data.edge_attr, col, dim_size=data.num_nodes, reduce='sum') # add node features from edge features
     data.adj_t = None
     if enable_sparsify:
-        data = maybe_sparsfication(data, 'ogbn-proteins', follow_by_subgraph_sampling, random_sparsify)
+        data = maybe_sparsfication(data, 'ogbn-proteins', follow_by_subgraph_sampling,heuristic, random_sparsify)
     split_idx = dataset.get_idx_split()
     data.train_mask = index2mask(split_idx['train'], data.num_nodes)
     data.val_mask = index2mask(split_idx['valid'], data.num_nodes)
@@ -117,8 +117,8 @@ def get_data(root: str, name: str, follow_by_subgraph_sampling: bool=False, enab
     elif name.lower() == 'arxiv':
         return get_arxiv(root, enable_sparsify, heuristic , random_sparsify, follow_by_subgraph_sampling)
     elif name.lower() == 'proteins':
-        return get_proteins(root, enable_sparsify, random_sparsify, follow_by_subgraph_sampling)
+        return get_proteins(root, enable_sparsify, heuristic ,random_sparsify, follow_by_subgraph_sampling)
     elif name.lower() == 'products':
-        return get_products(root, enable_sparsify, random_sparsify, follow_by_subgraph_sampling)
+        return get_products(root, enable_sparsify,  heuristic,random_sparsify, follow_by_subgraph_sampling)
     else:
         raise NotImplementedError

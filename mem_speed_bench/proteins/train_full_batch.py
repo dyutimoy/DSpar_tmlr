@@ -50,6 +50,7 @@ parser.add_argument('--amp', help='whether to enable apx mode', action='store_tr
 parser.add_argument('--test_speed', action='store_true', help='whether to test the speed and throughout')
 parser.add_argument('--random_sparsify', help='whether to randomly sparsify the graph', action='store_true')
 parser.add_argument('--spec_sparsify', help='whether to spectrally sparsify the graph', action='store_true')
+parser.add_argument('--heuristic',help="choose other heuristics", type=int,default=0)
 parser.add_argument('--eval_iter', type=int, default=10)
 
 
@@ -159,7 +160,7 @@ def main():
         print(f'Using GPU: {args.gpu} for training')
         torch.cuda.set_device(args.gpu)
 
-    if args.spec_sparsify or args.random_sparsify:
+    if args.spec_sparsify or args.random_sparsify or args.heuristic>0:
         assert args.spec_sparsify ^ args.random_sparsify, "both the flags of random_sparsify and spec_sparsify are true."
         enable_sparsify = True
         suffix = 'mode: ' + 'random' if args.random_sparsify else 'spectral'
@@ -177,7 +178,7 @@ def main():
     grad_norm = args.grad_norm
     print(f'clipping grad norm: {grad_norm}')
 
-    data, num_features, num_classes = get_data(args.root, 'proteins', False, enable_sparsify, args.random_sparsify)
+    data, num_features, num_classes = get_data(args.root, 'proteins', False, enable_sparsify,args.heuristic, args.random_sparsify)
     data = T.ToSparseTensor()(data)
     data.adj_t.set_value_(None)
     evaluator = Evaluator(name='ogbn-proteins')
