@@ -78,7 +78,7 @@ def maybe_sparsfication(data, dataset, follow_by_subgraph_sampling,heuristic= 0,
         import matplotlib.pyplot as plt
         plt.hist(pe.cpu().numpy(), bins=100)
         plt.title("Edge Sampling Probabilities")
-        plt.savefig("edge_prob_histogram2.png", dpi=300)
+        plt.savefig("edge_prob_histogram0.png", dpi=300)
     elif heuristic==1:
         print('Sparsify the graph by LOG of (1 + 2-hop degrees)')
         # Create adj_scipy from CPU tensors src, dst
@@ -98,7 +98,95 @@ def maybe_sparsfication(data, dataset, follow_by_subgraph_sampling,heuristic= 0,
         import matplotlib.pyplot as plt
         plt.hist(pe.cpu().numpy(), bins=100)
         plt.title("Edge Sampling Probabilities")
-        plt.savefig("edge_prob_histogram.png", dpi=300)
+        plt.savefig("edge_prob_histogram1.png", dpi=300)
+    elif heuristic == 2:
+        print('sparsify the graph by Jaccard similarity (common neighbors)')
+
+        # Step 2.1: Build adjacency sets
+        from collections import defaultdict
+        adj = defaultdict(set)
+        src_np, dst_np = src.numpy(), dst.numpy()
+        for u, v in zip(src_np, dst_np):
+            adj[u].add(v)
+            if is_undirected:
+                adj[v].add(u)
+
+        # Step 2.2: Compute Jaccard similarity per edge
+        inter = []
+        union = []
+        for u, v in zip(src_np, dst_np):
+            inter.append(len(adj[u] & adj[v]))
+            union.append(len(adj[u] | adj[v]))
+            #sim = inter / union if union != 0 else 0.0
+            #jaccard_scores.append(sim)
+
+        # Convert to torch tensor
+        #jaccard_scores = torch.tensor(jaccard_scores, dtype=torch.float64)
+        #jaccard_scores = torch.log1p(jaccard_scores)
+        # Invert for sparsification: low Jaccard = important edge
+        #pe = 1.0 - jaccard_scores + 1e-6  # avoid zero prob
+        inter = torch.tensor(inter, dtype=torch.float64)
+        union = torch.tensor(union, dtype=torch.float64)
+        d_e = torch.nan_to_num(1./(inter + union ))
+        
+        pe = (d_e).double()
+        #pe = torch.nan_to_num(1./(jaccard_scores + 1e-6))
+        pe = pe / pe.sum()
+        import matplotlib.pyplot as plt
+        plt.hist(pe.cpu().numpy(), bins=100)
+        plt.title("Edge Sampling Probabilities")
+        plt.savefig("edge_prob_histogram2.png", dpi=300)
+    elif heuristic == 3:
+        print('sparsify the graph by degree and  Jaccard similarity (common neighbors)')
+
+        # Step 2.1: Build adjacency sets
+        from collections import defaultdict
+        adj = defaultdict(set)
+        src_np, dst_np = src.numpy(), dst.numpy()
+        for u, v in zip(src_np, dst_np):
+            adj[u].add(v)
+            if is_undirected:
+                adj[v].add(u)
+
+        # Step 2.2: Compute Jaccard similarity per edge
+        inter = []
+        union = []
+        for u, v in zip(src_np, dst_np):
+            inter.append(len(adj[u] & adj[v]))
+            union.append(len(adj[u] | adj[v]))
+            #sim = inter / union if union != 0 else 0.0
+            #jaccard_scores.append(sim)
+
+        # Convert to torch tensor
+        #jaccard_scores = torch.tensor(jaccard_scores, dtype=torch.float64)
+        #jaccard_scores = torch.log1p(jaccard_scores)
+        # Invert for sparsification: low Jaccard = important edge
+        #pe = 1.0 - jaccard_scores + 1e-6  # avoid zero prob
+        
+        inter = torch.tensor(inter, dtype=torch.float64)
+        union = torch.tensor(union, dtype=torch.float64)
+        jaccard = inter / union
+
+        # Step 3: Get degrees
+        node_degrees = degree(dst, data.num_nodes)  # torch_geometric.utils.degree
+        deg_src = node_degrees[src]
+        deg_dst = node_degrees[dst]
+        deg_sum = (1. / deg_src) + (1. / deg_dst)
+
+        # Step 4: Final sampling score
+        eps = 1e-6
+        pe = (deg_sum * (1. / (jaccard**2 + 1))).double()
+        pe = torch.nan_to_num(pe)  # avoid NaNs if any
+        
+        
+        #pe = torch.nan_to_num(1./(jaccard_scores + 1e-6))
+        pe = pe / pe.sum()
+        import matplotlib.pyplot as plt
+        plt.hist(pe.cpu().numpy(), bins=100)
+        plt.title("Edge Sampling Probabilities")
+        plt.savefig("edge_prob_histogram2.png", dpi=300)
+    else:
+      print("Select a heuristic:0,1,2")
 
     p_cumsum = torch.cumsum(pe, 0)
     print(f'cal edge distribution used {time.time() - s} sec')
