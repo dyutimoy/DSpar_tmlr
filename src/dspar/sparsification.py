@@ -175,7 +175,7 @@ def maybe_sparsfication(data, dataset, follow_by_subgraph_sampling,heuristic= 0,
 
         # Step 4: Final sampling score
         eps = 1e-6
-        pe = (deg_sum * (1. / (jaccard**2 + 1))).double()
+        pe = (deg_sum * (1. / (jaccard + 1))).double()
         pe = torch.nan_to_num(pe)  # avoid NaNs if any
         
         
